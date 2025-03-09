@@ -14,7 +14,7 @@ console.log('service_worker.js LOADING');
 // depends if you are using /docs/  or /master/
 // /js_canvas_IO_docs/
 
-let verion_numner_passed_in = '00.04';
+let verion_numner_passed_in = '00.05';
 
 const CACHE_NAME = `dtk-gitio-cache_${verion_numner_passed_in}`;  // TODO add version number for ServWrkr updates
 
@@ -137,29 +137,40 @@ self.addEventListener('activate', (evt) => {
 });
 
 
-// fetch event - service network requests 
-//self.addEventListener('fetch', function(event) {
-//  event.respondWith(fetch(event.request));          // pass request to network
-//});
-
-// fetch event - network only w/ OFFLINE page
-//self.addEventListener('fetch', (evt) => {
-//  if (evt.request.mode !== 'navigate') {
-//    return;
-//  }
-//  evt.respondWith(fetch(evt.request).catch(() => {
-//      return caches.open(CACHE_NAME).then((cache) => {
-//        return cache.match('static/offline.html');
-//      });
-//    })
-//  );
-//});
-
 // fetch event - Cache falling back to network
+var fc = 0;
+
 self.addEventListener('fetch', function(event) {
+  fc += 1;
+  console.log(`[SW] fetch:${fc}`);
+  console.log(event.request.url);
+  console.log(event);
+
   event.respondWith(
     caches.match(event.request).then(function(response) {
-      return response || fetch(event.request);
+      // Return cached response if available
+      if (response) {
+        return response;
+      }
+      
+      // Otherwise fetch from network
+      return fetch(event.request)
+        .then(function(networkResponse) {
+          // Optional: Cache new responses for future offline use
+          // if (networkResponse.status === 200) {
+          //   let responseClone = networkResponse.clone();
+          //   caches.open(CACHE_NAME).then(function(cache) {
+          //     cache.put(event.request, responseClone);
+          //   });
+          // }
+          return networkResponse;
+        })
+        .catch(function(error) {
+          console.error('Fetching failed:', error);
+          // Return a fallback or offline page if you have one
+          // return caches.match('/js_canvas_IO_docs/offline.html');
+          throw error;
+        });
     })
   );
 });
